@@ -21,6 +21,15 @@ bool GamePlay::start()
     }
     m_game_engine.add_visual_object( bg );
 
+    //
+    std::shared_ptr< DraggableObject > brick( new DraggableObject );
+    brick->set_coords( {50, 50} );
+    if ( !brick->show_image( "data/Red.png" ) )
+    {
+         return false;
+    }
+    m_game_engine.add_draggable_object( brick );
+
     return true;
 }
 

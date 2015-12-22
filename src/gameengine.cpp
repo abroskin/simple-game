@@ -17,7 +17,6 @@ void destroy_window( SDL_Window* window )
 GameEngine::GameEngine():
     m_window( nullptr, destroy_window )
 {
-
 }
 
 GameEngine::~GameEngine()
@@ -26,7 +25,7 @@ GameEngine::~GameEngine()
     SDL_Quit();
 }
 
-bool GameEngine::start( const std::pair< size_t, size_t >& screen_size, bool fullscreen )
+bool GameEngine::start( const Size& screen_size, bool fullscreen )
 {
     m_screen_size = screen_size;
 
@@ -78,6 +77,11 @@ bool GameEngine::poll( std::chrono::milliseconds time_delta )
             case SDL_QUIT:
             {
                 return false;
+            }
+            case SDL_MOUSEBUTTONDOWN:
+            {
+                m_mouse_controller.on_mouse_button_down( m_draggable_objects, Point( event.button.x, event.button.y ) );
+                break;
             }
         }
     }

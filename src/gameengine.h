@@ -7,6 +7,7 @@
 
 #include "gameobject.h"
 #include "draggableobject.h"
+#include "mousecontroller.h"
 
 class GameEngine: public GameObject
 {
@@ -14,7 +15,7 @@ public:
     GameEngine();
     ~GameEngine() override;
 
-    bool start( const std::pair< size_t, size_t >& screen_size, bool fullscreen );
+    bool start( const Size& screen_size, bool fullscreen );
     bool poll( std::chrono::milliseconds time_delta ) override;
 
     void add_object( std::shared_ptr< GameObject > object );
@@ -33,7 +34,9 @@ private:
 
     std::unique_ptr< SDL_Window, void(*)( SDL_Window* ) > m_window;
 
-    std::pair< size_t, size_t > m_screen_size;
+    Size m_screen_size;
+
+    MouseController m_mouse_controller;
 };
 
 #endif // GAMEENGINE_H
