@@ -30,6 +30,14 @@ bool GamePlay::start()
     }
     m_game_engine.add_draggable_object( brick );
 
+    brick.reset( new DraggableObject );
+    brick->set_coords( {100, 100} );
+    if ( !brick->show_image( "data/Green.png" ) )
+    {
+         return false;
+    }
+    m_game_engine.add_draggable_object( brick );
+
     return true;
 }
 

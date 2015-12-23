@@ -15,16 +15,16 @@ public:
     VisualObject();
     ~VisualObject() override;
 
-    void set_coords( const Point& coords );
-    Point get_coords() const;
+    void set_coords( const SDL_Point& coords );
+    SDL_Point get_coords() const;
 
-    Rect get_bounding_box() const;
+    SDL_Rect get_bounding_box() const;
 
     bool show_image( const std::string& file );
     virtual bool render( SDL_Surface* surf, const Size& surf_size );
 
-private:
-    Point m_coords;
+protected:
+    SDL_Point m_coords;
     std::unique_ptr< SDL_Surface, void(*)( SDL_Surface* ) > m_img;
 };
 

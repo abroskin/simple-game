@@ -1,6 +1,5 @@
 #include "visualobject.h"
-
-#include <SDL2/SDL_image.h>
+#include "common.h"
 
 namespace
 {
@@ -21,21 +20,21 @@ VisualObject::~VisualObject()
 
 }
 
-void VisualObject::set_coords(const Point& coords)
+void VisualObject::set_coords(const SDL_Point& coords)
 {
     m_coords = coords;
 }
 
-Point VisualObject::get_coords() const
+SDL_Point VisualObject::get_coords() const
 {
     return m_coords;
 }
 
-Rect VisualObject::get_bounding_box() const
+SDL_Rect VisualObject::get_bounding_box() const
 {
-    return Rect( m_coords.first, m_coords.second,
+    return SDL_Rect( { m_coords.x, m_coords.y,
                  m_img ? m_img->w : 0,
-                 m_img ? m_img->h : 0 );
+                 m_img ? m_img->h : 0 } );
 }
 
 bool VisualObject::show_image(const std::string& file)
@@ -46,11 +45,7 @@ bool VisualObject::show_image(const std::string& file)
 
 bool VisualObject::render( SDL_Surface* surf, const Size& surf_size)
 {
-    SDL_Rect dst_rect;
-    dst_rect.x = m_coords.first;
-    dst_rect.y = m_coords.second;
-    dst_rect.w = m_img->w;
-    dst_rect.h = m_img->h;
+    SDL_Rect dst_rect = get_bounding_box();
 
     if ( SDL_BlitSurface( m_img.get(), nullptr, surf, &dst_rect ) != 0 )
     {

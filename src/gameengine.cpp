@@ -80,7 +80,20 @@ bool GameEngine::poll( std::chrono::milliseconds time_delta )
             }
             case SDL_MOUSEBUTTONDOWN:
             {
-                m_mouse_controller.on_mouse_button_down( m_draggable_objects, Point( event.button.x, event.button.y ) );
+                m_mouse_controller.on_mouse_button_down(
+                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
+                break;
+            }
+            case SDL_MOUSEBUTTONUP:
+            {
+                m_mouse_controller.on_mouse_button_up(
+                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
+                break;
+            }
+            case SDL_MOUSEMOTION:
+            {
+                m_mouse_controller.on_mouse_move(
+                            m_draggable_objects, SDL_Point( { event.motion.xrel, event.motion.yrel } ) );
                 break;
             }
         }
