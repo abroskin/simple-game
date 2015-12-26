@@ -178,13 +178,12 @@ void GameEngine::remove_draggable_object( std::shared_ptr<DraggableObject> objec
     remove_visual_object( object );
 }
 
-std::shared_ptr<DraggableObject> GameEngine::get_dragging_object() const
+void GameEngine::render_on_top( std::shared_ptr<VisualObject> object )
 {
-    return m_mouse_controller.m_dragging_object;
-}
-
-std::shared_ptr<DraggableObject> GameEngine::get_highlighted_object() const
-{
-    return m_mouse_controller.m_highlighted_object;
+    auto it = std::find( m_visual_objects.begin(), m_visual_objects.end(), object );
+    if ( it != m_visual_objects.end() )
+    {
+        std::swap( *it, *m_visual_objects.rbegin() );
+    }
 }
 

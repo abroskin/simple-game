@@ -1,6 +1,7 @@
 #include "gameplay.h"
 #include "gameengine.h"
 
+#include <array>
 #include <algorithm>
 
 GamePlay::GamePlay( GameEngine& game_engine ):
@@ -35,7 +36,8 @@ void GamePlay::try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< B
     // swap cell coordinates.
     std::swap( swap_pair.first->m_cell_coord, swap_pair.second->m_cell_coord );
 
-    std::vector<std::shared_ptr<Brick> > matches = check_for_match();
+    std::vector< std::shared_ptr< Brick > > including_bricks{ swap_pair.first, swap_pair.second };
+    std::vector<std::shared_ptr<Brick> > matches = check_for_match( including_bricks );
     if ( matches.empty() )
     {
         // swap cell coordinates back.
@@ -43,14 +45,17 @@ void GamePlay::try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< B
     }
     else
     {
+        m_score += matches.size();
         m_highlighted_brick.reset();
+        swap_pair.first->set_highlight( false );
+        swap_pair.second->set_highlight( false );
 
         // Swap coordinates.
         SDL_Point tmp_point = swap_pair.first->get_coords();
         swap_pair.first->set_coords( swap_pair.second->get_coords() );
         swap_pair.second->set_coords( tmp_point );
 
-        remove_bricks( matches );
+        replace_bricks( matches );
     }
 }
 
@@ -79,9 +84,11 @@ namespace
      }
 }
 
-std::vector<std::shared_ptr<Brick> > GamePlay::check_for_match()
+std::vector<std::shared_ptr<Brick> > GamePlay::check_for_match(
+        std::vector< std::shared_ptr< Brick > > including_bricks )
 {
     // Sort bricks.
+    std::sort( including_bricks.begin(), including_bricks.end() );
     std::sort( m_bricks.begin(), m_bricks.end(),
                []( const std::shared_ptr< Brick >& a, const std::shared_ptr< Brick >& b )
     {
@@ -94,18 +101,23 @@ std::vector<std::shared_ptr<Brick> > GamePlay::check_for_match()
     std::vector< std::shared_ptr< Brick > > matches;
     for ( auto brick_it = m_bricks.begin(); brick_it != m_bricks.end(); ++brick_it )
     {
-        std::vector< std::shared_ptr< Brick > > sequence;
-        get_sequence( (*brick_it)->m_color, brick_it, m_bricks.end(), SDL_Point{0, 1}, sequence );
-        if ( sequence.size() >= MIN_MATCH_NUMBER )
+        std::array< SDL_Point, 2 > directions{{{0,1}, {1,0}}};
+        for( const auto& direction: directions )
         {
-            matches.insert( matches.end(), sequence.begin(), sequence.end() );
-        }
-
-        sequence.clear();
-        get_sequence( (*brick_it)->m_color, brick_it, m_bricks.end(), SDL_Point{1, 0}, sequence );
-        if ( sequence.size() >= MIN_MATCH_NUMBER )
-        {
-            matches.insert( matches.end(), sequence.begin(), sequence.end() );
+            std::vector< std::shared_ptr< Brick > > sequence;
+            get_sequence( (*brick_it)->m_color, brick_it, m_bricks.end(), direction, sequence );
+            if ( sequence.size() >= MIN_MATCH_NUMBER )
+            {
+                std::sort( sequence.begin(), sequence.end() );
+                std::vector< std::shared_ptr< Brick > > intersection;
+                std::set_intersection(  sequence.begin(), sequence.end(),
+                                        including_bricks.begin(), including_bricks.end(),
+                                        std::back_inserter( intersection ) );
+                if ( !intersection.empty() )
+                {
+                    matches.insert( matches.end(), sequence.begin(), sequence.end() );
+                }
+            }
         }
     }
 
@@ -114,6 +126,20 @@ std::vector<std::shared_ptr<Brick> > GamePlay::check_for_match()
     matches.erase( std::unique( matches.begin(), matches.end() ), matches.end() );
 
     return matches;
+}
+
+void GamePlay::remove_brick(std::shared_ptr<Brick> brick)
+{
+    m_bricks.erase( std::remove( m_bricks.begin(), m_bricks.end(), brick ), m_bricks.end() );
+    m_game_engine.remove_draggable_object( brick );
+}
+
+void GamePlay::remove_bricks(std::vector<std::shared_ptr<Brick> > bricks)
+{
+    for ( auto& brick: bricks )
+    {
+        remove_brick( brick );
+    }
 }
 
 SDL_Point GamePlay::move_bricks_above( std::shared_ptr<Brick> brick )
@@ -147,27 +173,29 @@ std::shared_ptr<Brick> GamePlay::add_brick()
     return brick;
 }
 
-SDL_Point GamePlay::remove_brick(std::shared_ptr<Brick> brick)
+void GamePlay::replace_brick(std::shared_ptr<Brick> brick)
 {
     move_bricks_above( brick );
-
-    m_bricks.erase( std::remove( m_bricks.begin(), m_bricks.end(), brick ), m_bricks.end() );
-    m_game_engine.remove_draggable_object( brick );
-    return brick->m_cell_coord;
+    remove_brick( brick );
 }
 
-std::vector< SDL_Point > GamePlay::remove_bricks(std::vector<std::shared_ptr<Brick> > bricks)
+void GamePlay::replace_bricks(std::vector<std::shared_ptr<Brick> > bricks)
 {
-    std::vector< SDL_Point > empty_cells( bricks.size() );
     for ( auto& brick: bricks )
     {
-        empty_cells.push_back( remove_brick( brick ) );
+        replace_brick( brick );
     }
-    return empty_cells;
 }
 
 void GamePlay::init_field()
 {
+    m_score = 0;
+    m_session_time = std::chrono::seconds(0);
+
+    m_game_engine.m_mouse_controller.reset();
+
+    remove_bricks( m_bricks );
+
     const int offset_x = 333u;
     const int step_x = 42u;
     const int offset_y = 103u;
@@ -185,12 +213,28 @@ void GamePlay::init_field()
 
 bool GamePlay::poll(std::chrono::milliseconds time_delta)
 {
+    // Check time.
+    m_session_time += time_delta;
+    if ( std::chrono::duration_cast<std::chrono::seconds>(m_session_time) >= std::chrono::seconds( long(SESSION_TIME) ) )
+    {
+        std::string score_text = std::string( "You've got " ) + std::to_string( m_score ) +
+                std::string( " points!\nNew session is already started." );
+
+        SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_INFORMATION,
+                                  "The session is over.",
+                                  score_text.c_str(),
+                                  NULL );
+        init_field();
+    }
+
+    // Check a swap action.
     std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > > swap_pair;
-    // check for brick intersection.
     for ( auto& brick: m_bricks )
     {
         if ( brick->is_highlighted() )
         {
+            m_game_engine.render_on_top( brick );
+
             if ( m_highlighted_brick && brick != m_highlighted_brick )
             {
                 swap_pair.first = brick;
@@ -204,11 +248,12 @@ bool GamePlay::poll(std::chrono::milliseconds time_delta)
     // Try to swap pairs.
     if ( swap_pair.first && swap_pair.second )
     {
-        try_swap( swap_pair );
+        if ( SDL_abs( swap_pair.first->m_cell_coord.x - swap_pair.second->m_cell_coord.x ) +
+             SDL_abs( swap_pair.first->m_cell_coord.y - swap_pair.second->m_cell_coord.y ) == 1 )
+        {
+            try_swap( swap_pair );
+        }
     }
-
-
-
 
     return true;
 }

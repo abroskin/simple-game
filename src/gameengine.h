@@ -27,8 +27,10 @@ public:
     void add_draggable_object( std::shared_ptr< DraggableObject > object );
     void remove_draggable_object( std::shared_ptr< DraggableObject > object );
 
-    std::shared_ptr< DraggableObject > get_dragging_object() const;
-    std::shared_ptr< DraggableObject > get_highlighted_object() const;
+    void render_on_top( std::shared_ptr< VisualObject > object );
+
+public:
+    MouseController m_mouse_controller;
 
 private:
     std::vector< std::shared_ptr< GameObject > > m_objects;
@@ -39,7 +41,6 @@ private:
 
     Size m_screen_size;
 
-    MouseController m_mouse_controller;
 };
 
 #endif // GAMEENGINE_H

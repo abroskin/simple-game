@@ -2,7 +2,8 @@
 #include "common.h"
 
 DraggableObject::DraggableObject():
-    m_is_highlighted( false )
+    m_is_highlighted( false ),
+    m_is_movable( false )
 {
 
 }
@@ -30,5 +31,15 @@ void DraggableObject::set_highlight(bool val)
 bool DraggableObject::is_highlighted()
 {
     return m_is_highlighted;
+}
+
+bool DraggableObject::is_movable() const
+{
+    return m_is_movable;
+}
+
+void DraggableObject::set_movable(const bool val)
+{
+    m_is_movable = val;
 }
 

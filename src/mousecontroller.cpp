@@ -27,7 +27,11 @@ void MouseController::on_mouse_button_down(std::vector<std::shared_ptr<Draggable
             obj->set_highlight( true );
 
             m_highlighted_object = obj;
-            m_dragging_object = obj;
+
+            if ( obj->is_movable() )
+            {
+                m_dragging_object = obj;
+            }
         }
     }
 }
@@ -46,5 +50,11 @@ void MouseController::on_mouse_move(std::vector<std::shared_ptr<DraggableObject>
         SDL_Point point = m_dragging_object->get_coords();
         m_dragging_object->set_coords( SDL_Point( { point.x + coords.x, point.y + coords.y } ) );
     }
+}
+
+void MouseController::reset()
+{
+    m_dragging_object.reset();
+    m_highlighted_object.reset();
 }
 

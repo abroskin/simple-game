@@ -19,16 +19,20 @@ public:
     bool poll( std::chrono::milliseconds time_delta ) override;
 
 private:
-    static const size_t MIN_MATCH_NUMBER = 3;
-    static const size_t FIELD_WIDTH = 8;
-    static const size_t FIELD_HEIGHT = 8;
+    static const int MIN_MATCH_NUMBER = 3;
+    static const int FIELD_WIDTH = 8;
+    static const int FIELD_HEIGHT = 8;
+    static const int SESSION_TIME = 60;
 
 private:
     void try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > > swap_pair );
-    std::vector< std::shared_ptr< Brick > > check_for_match();
+    std::vector< std::shared_ptr< Brick > > check_for_match( std::vector< std::shared_ptr< Brick > > including_bricks );
 
-    SDL_Point remove_brick( std::shared_ptr< Brick > brick );
-    std::vector< SDL_Point > remove_bricks( std::vector< std::shared_ptr< Brick > > bricks );
+    void remove_brick( std::shared_ptr< Brick > brick );
+    void remove_bricks( std::vector< std::shared_ptr< Brick > > bricks );
+
+    void replace_brick( std::shared_ptr< Brick > brick );
+    void replace_bricks( std::vector< std::shared_ptr< Brick > > bricks );
 
     SDL_Point move_bricks_above( std::shared_ptr<Brick> brick );
 
@@ -40,6 +44,9 @@ private:
 
     std::vector< std::shared_ptr< Brick > > m_bricks;
     std::shared_ptr< Brick > m_highlighted_brick;
+
+    std::chrono::milliseconds m_session_time;
+    int m_score;
 };
 
 #endif // GAMEPLAY_H
