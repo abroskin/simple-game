@@ -19,7 +19,7 @@ public:
     void on_mouse_move( std::vector< std::shared_ptr< DraggableObject > >& draggable_objects,
                         const SDL_Point& coords );
 
-private:
+public:
     std::shared_ptr< DraggableObject > m_dragging_object;
     std::shared_ptr< DraggableObject > m_highlighted_object;
 };

@@ -19,13 +19,16 @@ public:
     bool poll( std::chrono::milliseconds time_delta ) override;
 
     void add_object( std::shared_ptr< GameObject > object );
-    void remove_object( const std::shared_ptr< GameObject >& object );
+    void remove_object( std::shared_ptr< GameObject > object );
 
     void add_visual_object( std::shared_ptr< VisualObject > object );
-    void remove_visual_object( const std::shared_ptr< VisualObject >& object );
+    void remove_visual_object( std::shared_ptr< VisualObject > object );
 
     void add_draggable_object( std::shared_ptr< DraggableObject > object );
-    void remove_draggable_object( const std::shared_ptr< DraggableObject >& object );
+    void remove_draggable_object( std::shared_ptr< DraggableObject > object );
+
+    std::shared_ptr< DraggableObject > get_dragging_object() const;
+    std::shared_ptr< DraggableObject > get_highlighted_object() const;
 
 private:
     std::vector< std::shared_ptr< GameObject > > m_objects;

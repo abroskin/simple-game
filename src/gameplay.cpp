@@ -1,6 +1,8 @@
 #include "gameplay.h"
 #include "gameengine.h"
 
+#include <algorithm>
+
 GamePlay::GamePlay( GameEngine& game_engine ):
     m_game_engine( game_engine )
 {
@@ -21,28 +23,193 @@ bool GamePlay::start()
     }
     m_game_engine.add_visual_object( bg );
 
-    //
-    std::shared_ptr< DraggableObject > brick( new DraggableObject );
-    brick->set_coords( {50, 50} );
-    if ( !brick->show_image( "data/Red.png" ) )
-    {
-         return false;
-    }
-    m_game_engine.add_draggable_object( brick );
-
-    brick.reset( new DraggableObject );
-    brick->set_coords( {100, 100} );
-    if ( !brick->show_image( "data/Green.png" ) )
-    {
-         return false;
-    }
-    m_game_engine.add_draggable_object( brick );
+    init_field();
 
     return true;
 }
 
+
+
+void GamePlay::try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > > swap_pair )
+{
+    // swap cell coordinates.
+    std::swap( swap_pair.first->m_cell_coord, swap_pair.second->m_cell_coord );
+
+    std::vector<std::shared_ptr<Brick> > matches = check_for_match();
+    if ( matches.empty() )
+    {
+        // swap cell coordinates back.
+        std::swap( swap_pair.first->m_cell_coord, swap_pair.second->m_cell_coord );
+    }
+    else
+    {
+        m_highlighted_brick.reset();
+
+        // Swap coordinates.
+        SDL_Point tmp_point = swap_pair.first->get_coords();
+        swap_pair.first->set_coords( swap_pair.second->get_coords() );
+        swap_pair.second->set_coords( tmp_point );
+
+        remove_bricks( matches );
+    }
+}
+
+namespace
+{
+     void get_sequence( const Brick::Color& color,
+                        std::vector< std::shared_ptr< Brick > >::iterator cur_it,
+                        std::vector< std::shared_ptr< Brick > >::iterator end_it,
+                        const SDL_Point& direction,
+                        std::vector< std::shared_ptr< Brick > >& out_sequence )
+     {
+         if ( (*cur_it)->m_color == color )
+         {
+             out_sequence.push_back( *cur_it );
+
+             auto next_it = std::find_if( cur_it, end_it, [&]( std::shared_ptr< Brick >& it )
+             {
+                 return (*cur_it)->m_cell_coord.x + direction.x == it->m_cell_coord.x &&
+                        (*cur_it)->m_cell_coord.y + direction.y == it->m_cell_coord.y;
+             });
+             if ( next_it != end_it )
+             {
+                 get_sequence( color, next_it, end_it, direction, out_sequence );
+             }
+         }
+     }
+}
+
+std::vector<std::shared_ptr<Brick> > GamePlay::check_for_match()
+{
+    // Sort bricks.
+    std::sort( m_bricks.begin(), m_bricks.end(),
+               []( const std::shared_ptr< Brick >& a, const std::shared_ptr< Brick >& b )
+    {
+        return ( a->m_cell_coord.y == b->m_cell_coord.y ) ?
+                    ( a->m_cell_coord.x < b->m_cell_coord.x ):
+                    ( a->m_cell_coord.y < b->m_cell_coord.y );
+    });
+
+    // Find sequences.
+    std::vector< std::shared_ptr< Brick > > matches;
+    for ( auto brick_it = m_bricks.begin(); brick_it != m_bricks.end(); ++brick_it )
+    {
+        std::vector< std::shared_ptr< Brick > > sequence;
+        get_sequence( (*brick_it)->m_color, brick_it, m_bricks.end(), SDL_Point{0, 1}, sequence );
+        if ( sequence.size() >= MIN_MATCH_NUMBER )
+        {
+            matches.insert( matches.end(), sequence.begin(), sequence.end() );
+        }
+
+        sequence.clear();
+        get_sequence( (*brick_it)->m_color, brick_it, m_bricks.end(), SDL_Point{1, 0}, sequence );
+        if ( sequence.size() >= MIN_MATCH_NUMBER )
+        {
+            matches.insert( matches.end(), sequence.begin(), sequence.end() );
+        }
+    }
+
+    // Remove duplicates.
+    std::sort( matches.begin(), matches.end() );
+    matches.erase( std::unique( matches.begin(), matches.end() ), matches.end() );
+
+    return matches;
+}
+
+SDL_Point GamePlay::move_bricks_above( std::shared_ptr<Brick> brick )
+{
+    auto brick_above_it = std::find_if( m_bricks.begin(), m_bricks.end(), [&]( std::shared_ptr< Brick >& it )
+    {
+        return brick->m_cell_coord.x == it->m_cell_coord.x &&
+               brick->m_cell_coord.y - 1 == it->m_cell_coord.y;
+    });
+
+    std::shared_ptr<Brick> brick_above;
+    if ( brick_above_it != m_bricks.end() )
+    {
+        brick_above = *brick_above_it;
+        move_bricks_above( brick_above );
+    }
+    else
+    {
+        brick_above = add_brick();
+    }
+
+    brick_above->m_cell_coord = brick->m_cell_coord;
+    brick_above->set_coords( brick->get_coords() );
+}
+
+std::shared_ptr<Brick> GamePlay::add_brick()
+{
+    std::shared_ptr< Brick > brick( new Brick );
+    m_bricks.push_back( brick );
+    m_game_engine.add_draggable_object( brick );
+    return brick;
+}
+
+SDL_Point GamePlay::remove_brick(std::shared_ptr<Brick> brick)
+{
+    move_bricks_above( brick );
+
+    m_bricks.erase( std::remove( m_bricks.begin(), m_bricks.end(), brick ), m_bricks.end() );
+    m_game_engine.remove_draggable_object( brick );
+    return brick->m_cell_coord;
+}
+
+std::vector< SDL_Point > GamePlay::remove_bricks(std::vector<std::shared_ptr<Brick> > bricks)
+{
+    std::vector< SDL_Point > empty_cells( bricks.size() );
+    for ( auto& brick: bricks )
+    {
+        empty_cells.push_back( remove_brick( brick ) );
+    }
+    return empty_cells;
+}
+
+void GamePlay::init_field()
+{
+    const int offset_x = 333u;
+    const int step_x = 42u;
+    const int offset_y = 103u;
+    const int step_y = 42u;
+    for( int i = 0u; i < FIELD_HEIGHT; ++i )
+    {
+        for( int j = 0u; j < FIELD_WIDTH; ++j )
+        {
+            std::shared_ptr< Brick > brick = add_brick();
+            brick->m_cell_coord = { j, i };
+            brick->set_coords( { offset_x + j*step_x, offset_y + i*step_y } );
+        }
+    }
+}
+
 bool GamePlay::poll(std::chrono::milliseconds time_delta)
 {
+    std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > > swap_pair;
+    // check for brick intersection.
+    for ( auto& brick: m_bricks )
+    {
+        if ( brick->is_highlighted() )
+        {
+            if ( m_highlighted_brick && brick != m_highlighted_brick )
+            {
+                swap_pair.first = brick;
+                swap_pair.second = m_highlighted_brick;
+            }
+            m_highlighted_brick = brick;
+            break;
+        }
+    }
+
+    // Try to swap pairs.
+    if ( swap_pair.first && swap_pair.second )
+    {
+        try_swap( swap_pair );
+    }
+
+
+
+
     return true;
 }
 

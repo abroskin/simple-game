@@ -138,12 +138,12 @@ void GameEngine::add_object(std::shared_ptr<GameObject> object)
     m_objects.push_back( object );
 }
 
-void GameEngine::remove_object(const std::shared_ptr<GameObject>& object)
+void GameEngine::remove_object( std::shared_ptr<GameObject> object)
 {
     m_objects.erase( std::remove_if( m_objects.begin(), m_objects.end(), [&]( std::shared_ptr<GameObject>& it )->bool
     {
         return it == object;
-    } ) );
+    } ), m_objects.end() );
 }
 
 void GameEngine::add_visual_object(std::shared_ptr<VisualObject> object)
@@ -152,13 +152,13 @@ void GameEngine::add_visual_object(std::shared_ptr<VisualObject> object)
     add_object( object );
 }
 
-void GameEngine::remove_visual_object(const std::shared_ptr<VisualObject>& object)
+void GameEngine::remove_visual_object( std::shared_ptr<VisualObject> object)
 {
     m_visual_objects.erase( std::remove_if( m_visual_objects.begin(), m_visual_objects.end(),
                                             [&]( std::shared_ptr<VisualObject>& it )->bool
     {
         return it == object;
-    } ) );
+    } ), m_visual_objects.end() );
     remove_object( object );
 }
 
@@ -168,13 +168,23 @@ void GameEngine::add_draggable_object(std::shared_ptr<DraggableObject> object)
     add_visual_object( object );
 }
 
-void GameEngine::remove_draggable_object(const std::shared_ptr<DraggableObject>& object)
+void GameEngine::remove_draggable_object( std::shared_ptr<DraggableObject> object)
 {
     m_draggable_objects.erase( std::remove_if( m_draggable_objects.begin(), m_draggable_objects.end(),
                                                [&]( std::shared_ptr<DraggableObject>& it )->bool
     {
         return it == object;
-    } ) );
+    } ), m_draggable_objects.end() );
     remove_visual_object( object );
+}
+
+std::shared_ptr<DraggableObject> GameEngine::get_dragging_object() const
+{
+    return m_mouse_controller.m_dragging_object;
+}
+
+std::shared_ptr<DraggableObject> GameEngine::get_highlighted_object() const
+{
+    return m_mouse_controller.m_highlighted_object;
 }
 
