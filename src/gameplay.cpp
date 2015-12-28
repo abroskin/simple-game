@@ -49,6 +49,8 @@ void GamePlay::try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< B
         m_highlighted_brick.reset();
         swap_pair.first->set_highlight( false );
         swap_pair.second->set_highlight( false );
+        swap_pair.first->set_dragged( false );
+        swap_pair.second->set_dragged( false );
 
         // Swap coordinates.
         SDL_Point tmp_point = swap_pair.first->get_coords();
@@ -165,6 +167,31 @@ SDL_Point GamePlay::move_bricks_above( std::shared_ptr<Brick> brick )
     brick_above->set_coords( brick->get_coords() );
 }
 
+std::shared_ptr<Brick> GamePlay::get_most_overlapped(const std::shared_ptr<Brick>& overlapping_brick ) const
+{
+    int square = 0;
+    std::shared_ptr< Brick > res_brick;
+
+    for ( auto& brick: m_bricks )
+    {
+        if ( brick != overlapping_brick )
+        {
+            SDL_Rect overlapping_rect = overlapping_brick->get_bounding_box();
+            SDL_Rect curr_rect = brick->get_bounding_box();
+            SDL_Rect intersection;
+            if ( SDL_IntersectRect( &overlapping_rect, &curr_rect, &intersection ) )
+            {
+                if ( intersection.h * intersection.w > square )
+                {
+                    square = intersection.h * intersection.w;
+                    res_brick = brick;
+                }
+            }
+        }
+    }
+    return res_brick;
+}
+
 std::shared_ptr<Brick> GamePlay::add_brick()
 {
     std::shared_ptr< Brick > brick( new Brick );
@@ -192,7 +219,8 @@ void GamePlay::init_field()
     m_score = 0;
     m_session_time = std::chrono::seconds(0);
 
-    m_game_engine.m_mouse_controller.reset();
+    m_dragged_brick.reset();
+    m_highlighted_brick.reset();
 
     remove_bricks( m_bricks );
 
@@ -217,6 +245,7 @@ bool GamePlay::poll(std::chrono::milliseconds time_delta)
     m_session_time += time_delta;
     if ( std::chrono::duration_cast<std::chrono::seconds>(m_session_time) >= std::chrono::seconds( long(SESSION_TIME) ) )
     {
+        return false;
         std::string score_text = std::string( "You've got " ) + std::to_string( m_score ) +
                 std::string( " points!\nNew session is already started." );
 
@@ -227,7 +256,7 @@ bool GamePlay::poll(std::chrono::milliseconds time_delta)
         init_field();
     }
 
-    // Check a swap action.
+    // Check a swap by highlighting.
     std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > > swap_pair;
     for ( auto& brick: m_bricks )
     {
@@ -245,7 +274,41 @@ bool GamePlay::poll(std::chrono::milliseconds time_delta)
         }
     }
 
-    // Try to swap pairs.
+    if ( !swap_pair.first || !swap_pair.second )
+    {
+        // Check a swap by dragging.
+        std::shared_ptr< Brick > cur_dragged_brick;
+        for ( auto& brick: m_bricks )
+        {
+            if ( brick->is_dragged() )
+            {
+                cur_dragged_brick = brick;
+                break;
+            }
+        }
+
+        if ( cur_dragged_brick )
+        {
+            m_dragged_brick = cur_dragged_brick;
+        }
+        else
+        {
+            if ( m_dragged_brick )
+            {
+                std::shared_ptr< Brick > overlapped_brick = get_most_overlapped( m_dragged_brick );
+                m_dragged_brick->set_coords( m_game_engine.m_mouse_controller.m_dragged_obj_initial_coords );
+                if ( overlapped_brick )
+                {
+                    swap_pair.first = m_dragged_brick;
+                    swap_pair.second = overlapped_brick;
+                }
+
+                m_dragged_brick.reset();
+            }
+        }
+    }
+
+    // Try to swap a pair.
     if ( swap_pair.first && swap_pair.second )
     {
         if ( SDL_abs( swap_pair.first->m_cell_coord.x - swap_pair.second->m_cell_coord.x ) +

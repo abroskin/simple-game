@@ -22,9 +22,7 @@ public:
     void reset();
 
 public:
-    std::shared_ptr< DraggableObject > m_dragging_object;
-
-    std::shared_ptr< DraggableObject > m_highlighted_object;
+    SDL_Point m_dragged_obj_initial_coords;
 };
 
 #endif // MOUSECONTROLLER_H

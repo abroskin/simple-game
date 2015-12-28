@@ -20,18 +20,17 @@ void MouseController::on_mouse_button_down(std::vector<std::shared_ptr<Draggable
     {
         if ( test_point_in_rect( coords, obj->get_bounding_box() ) )
         {
-            if ( m_highlighted_object )
-            {
-                m_highlighted_object->set_highlight( false );
-            }
             obj->set_highlight( true );
-
-            m_highlighted_object = obj;
 
             if ( obj->is_movable() )
             {
-                m_dragging_object = obj;
+                obj->set_dragged( true );
+                m_dragged_obj_initial_coords = obj->get_coords();
             }
+        }
+        else
+        {
+            obj->set_highlight( false );
         }
     }
 }
@@ -39,22 +38,28 @@ void MouseController::on_mouse_button_down(std::vector<std::shared_ptr<Draggable
 void MouseController::on_mouse_button_up(std::vector<std::shared_ptr<DraggableObject> >& draggable_objects,
                                          const SDL_Point& coords)
 {
-    m_dragging_object.reset();
+    for ( auto& obj: draggable_objects )
+    {
+        obj->set_dragged( false );
+    }
 }
 
 void MouseController::on_mouse_move(std::vector<std::shared_ptr<DraggableObject> >& draggable_objects,
                                     const SDL_Point& coords)
 {
-    if ( m_dragging_object )
+    std::shared_ptr<DraggableObject> dragging_object;
+    for ( auto& obj: draggable_objects )
     {
-        SDL_Point point = m_dragging_object->get_coords();
-        m_dragging_object->set_coords( SDL_Point( { point.x + coords.x, point.y + coords.y } ) );
+        if ( obj->is_dragged() )
+        {
+            dragging_object = obj;
+        }
     }
-}
 
-void MouseController::reset()
-{
-    m_dragging_object.reset();
-    m_highlighted_object.reset();
+    if ( dragging_object )
+    {
+        SDL_Point point = dragging_object->get_coords();
+        dragging_object->set_coords( SDL_Point( { point.x + coords.x, point.y + coords.y } ) );
+    }
 }
 

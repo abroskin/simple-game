@@ -7,7 +7,6 @@
 #include <SDL2/SDL.h>
 
 #include "gameobject.h"
-#include "common.h"
 
 class VisualObject : public GameObject
 {
@@ -21,7 +20,7 @@ public:
     SDL_Rect get_bounding_box() const;
 
     bool show_image( const std::string& file );
-    virtual bool render( SDL_Surface* surf, const Size& surf_size );
+    virtual bool render( SDL_Surface* surf );
 
 protected:
     SDL_Point m_coords;

@@ -1,5 +1,6 @@
 #include "visualobject.h"
-#include "common.h"
+
+#include <SDL2/SDL_image.h>
 
 namespace
 {
@@ -12,12 +13,10 @@ void free_surface( SDL_Surface* surf )
 VisualObject::VisualObject():
     m_img( nullptr, free_surface )
 {
-
 }
 
 VisualObject::~VisualObject()
 {
-
 }
 
 void VisualObject::set_coords(const SDL_Point& coords)
@@ -43,7 +42,7 @@ bool VisualObject::show_image(const std::string& file)
     return m_img.get() != 0;
 }
 
-bool VisualObject::render( SDL_Surface* surf, const Size& surf_size)
+bool VisualObject::render( SDL_Surface* surf )
 {
     SDL_Rect dst_rect = get_bounding_box();
 

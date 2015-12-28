@@ -5,7 +5,7 @@
 int main()
 {
     GameEngine engine;
-    if ( !engine.start( { 755, 600 }, false ) )
+    if ( !engine.start( 755, 600, true ) )
     {
         return 0;
     }

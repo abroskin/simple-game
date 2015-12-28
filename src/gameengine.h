@@ -15,17 +15,17 @@ public:
     GameEngine();
     ~GameEngine() override;
 
-    bool start( const Size& screen_size, bool fullscreen );
+    bool start( const int screen_width, const int screen_height, bool fullscreen );
     bool poll( std::chrono::milliseconds time_delta ) override;
 
     void add_object( std::shared_ptr< GameObject > object );
-    void remove_object( std::shared_ptr< GameObject > object );
+    void remove_object( const std::shared_ptr< GameObject >& object );
 
     void add_visual_object( std::shared_ptr< VisualObject > object );
-    void remove_visual_object( std::shared_ptr< VisualObject > object );
+    void remove_visual_object( const std::shared_ptr< VisualObject >& object );
 
     void add_draggable_object( std::shared_ptr< DraggableObject > object );
-    void remove_draggable_object( std::shared_ptr< DraggableObject > object );
+    void remove_draggable_object( const std::shared_ptr< DraggableObject >& object );
 
     void render_on_top( std::shared_ptr< VisualObject > object );
 
@@ -38,9 +38,6 @@ private:
     std::vector< std::shared_ptr< DraggableObject > > m_draggable_objects;
 
     std::unique_ptr< SDL_Window, void(*)( SDL_Window* ) > m_window;
-
-    Size m_screen_size;
-
 };
 
 #endif // GAMEENGINE_H
