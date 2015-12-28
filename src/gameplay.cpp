@@ -47,6 +47,7 @@ void GamePlay::try_swap( std::pair< std::shared_ptr< Brick >, std::shared_ptr< B
     {
         m_score += matches.size();
         m_highlighted_brick.reset();
+        m_dragged_brick.reset();
         swap_pair.first->set_highlight( false );
         swap_pair.second->set_highlight( false );
         swap_pair.first->set_dragged( false );
@@ -245,7 +246,6 @@ bool GamePlay::poll(std::chrono::milliseconds time_delta)
     m_session_time += time_delta;
     if ( std::chrono::duration_cast<std::chrono::seconds>(m_session_time) >= std::chrono::seconds( long(SESSION_TIME) ) )
     {
-        return false;
         std::string score_text = std::string( "You've got " ) + std::to_string( m_score ) +
                 std::string( " points!\nNew session is already started." );
 

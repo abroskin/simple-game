@@ -37,8 +37,7 @@ bool GameEngine::start( const int screen_width, const int screen_height, bool fu
     {
         //Create window
         m_window.reset( SDL_CreateWindow(   "The game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                            screen_width, screen_height,
-                                            /*fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : */SDL_WINDOW_OPENGL ) );
+                                            screen_width, screen_height, SDL_WINDOW_SHOWN ) );
 
         if( !m_window )
         {
