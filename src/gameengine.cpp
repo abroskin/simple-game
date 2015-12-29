@@ -27,6 +27,8 @@ GameEngine::~GameEngine()
 
 bool GameEngine::start( const int screen_width, const int screen_height, bool fullscreen )
 {
+    m_fullscreen = false;
+
     // Load SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
@@ -47,9 +49,8 @@ bool GameEngine::start( const int screen_width, const int screen_height, bool fu
 
         if ( fullscreen )
         {
-            if ( SDL_SetWindowFullscreen( m_window.get(), SDL_WINDOW_FULLSCREEN ) != 0 )
+            if ( !toggle_fullscreen() )
             {
-                std::cout << "Can't go fullscreen! SDL Error: " << SDL_GetError() << std::endl;
                 return false;
             }
         }
@@ -70,49 +71,26 @@ bool GameEngine::start( const int screen_width, const int screen_height, bool fu
     }
 
     add_object( gameplay );
+
+    m_timestamp = std::chrono::high_resolution_clock::now();
+
     return true;
 }
 
-bool GameEngine::poll( std::chrono::milliseconds time_delta )
+bool GameEngine::poll()
 {
-    // Input.
-    SDL_Event event;
-    while( SDL_PollEvent(&event) )
+    // Timing
+    auto current_time = std::chrono::high_resolution_clock::now();
+    auto time_delta = std::chrono::duration_cast< std::chrono::milliseconds >( current_time - m_timestamp );
+    m_timestamp = current_time;
+
+    // Input
+    if ( !handling_events() )
     {
-        switch(event.type)
-        {
-            case SDL_KEYDOWN:
-            {
-                if ( event.key.keysym.scancode == SDL_SCANCODE_ESCAPE )
-                {
-                    return false;
-                }
-            }
-            case SDL_QUIT:
-            {
-                return false;
-            }
-            case SDL_MOUSEBUTTONDOWN:
-            {
-                m_mouse_controller.on_mouse_button_down(
-                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
-                break;
-            }
-            case SDL_MOUSEBUTTONUP:
-            {
-                m_mouse_controller.on_mouse_button_up(
-                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
-                break;
-            }
-            case SDL_MOUSEMOTION:
-            {
-                m_mouse_controller.on_mouse_move(
-                            m_draggable_objects, SDL_Point( { event.motion.xrel, event.motion.yrel } ) );
-                break;
-            }
-        }
+        return false;
     }
 
+    // Poll
     for ( auto& object: m_objects )
     {
         if ( !object->poll( time_delta ) )
@@ -122,25 +100,8 @@ bool GameEngine::poll( std::chrono::milliseconds time_delta )
     }
 
     // Render
-    SDL_Surface* screen = SDL_GetWindowSurface( m_window.get() );
-    if ( !screen )
+    if ( !render() )
     {
-        std::cout << "Can not get screen surface! SDL Error: " << SDL_GetError() << std::endl;
-        return false;
-    }
-
-    for ( auto& object: m_visual_objects )
-    {
-        if ( !object->render( screen ) )
-        {
-            std::cout << "Can not render the object! SDL Error: " << SDL_GetError() << std::endl;
-            return false;
-        }
-    }
-
-    if ( SDL_UpdateWindowSurface( m_window.get() ) != 0 )
-    {
-        std::cout << "Can not update the screen! SDL Error: " << SDL_GetError() << std::endl;
         return false;
     }
 
@@ -199,5 +160,116 @@ void GameEngine::render_on_top( std::shared_ptr<VisualObject> object )
     {
         std::swap( *it, *m_visual_objects.rbegin() );
     }
+}
+
+void GameEngine::show_info_popup(const std::string& title, const std::string& message)
+{
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    bool fullscreen = m_fullscreen;
+    if ( fullscreen )
+    {
+        toggle_fullscreen();
+    }
+
+    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_INFORMATION, title.c_str(), message.c_str(), nullptr );
+
+    if ( fullscreen )
+    {
+        toggle_fullscreen();
+    }
+
+    // Don't account events and time spent during popup message.
+    m_timestamp += std::chrono::high_resolution_clock::now() - start_time;
+
+    SDL_PumpEvents();
+    SDL_FlushEvents( std::numeric_limits<Uint32>::min(), std::numeric_limits<Uint32>::max() );
+}
+
+bool GameEngine::toggle_fullscreen()
+{
+    m_fullscreen = !m_fullscreen;
+    if ( SDL_SetWindowFullscreen( m_window.get(), m_fullscreen ? SDL_WINDOW_FULLSCREEN : 0 ) != 0 )
+    {
+        std::cout << "Can't toggle fullscreen mode! SDL Error: " << SDL_GetError() << std::endl;
+        return false;
+    }
+    return true;
+}
+
+bool GameEngine::handling_events()
+{
+    SDL_Event event;
+    while( SDL_PollEvent(&event) )
+    {
+        switch(event.type)
+        {
+            case SDL_KEYUP:
+            {
+                if ( event.key.keysym.scancode == SDL_SCANCODE_F )
+                {
+                    std::cout << "Key pressed" << std::endl;
+                    if ( !toggle_fullscreen() )
+                    {
+                        return false;
+                    }
+                }
+                else if ( event.key.keysym.scancode == SDL_SCANCODE_ESCAPE )
+                {
+                    return false;
+                }
+                break;
+            }
+            case SDL_QUIT:
+            {
+                return false;
+            }
+            case SDL_MOUSEBUTTONDOWN:
+            {
+                m_mouse_controller.on_mouse_button_down(
+                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
+                break;
+            }
+            case SDL_MOUSEBUTTONUP:
+            {
+                m_mouse_controller.on_mouse_button_up(
+                            m_draggable_objects, SDL_Point( { event.button.x, event.button.y } ) );
+                break;
+            }
+            case SDL_MOUSEMOTION:
+            {
+                m_mouse_controller.on_mouse_move(
+                            m_draggable_objects, SDL_Point( { event.motion.xrel, event.motion.yrel } ) );
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+bool GameEngine::render()
+{
+    SDL_Surface* screen = SDL_GetWindowSurface( m_window.get() );
+    if ( !screen )
+    {
+        std::cout << "Can not get screen surface! SDL Error: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    for ( auto& object: m_visual_objects )
+    {
+        if ( !object->render( screen ) )
+        {
+            std::cout << "Can not render the object! SDL Error: " << SDL_GetError() << std::endl;
+            return false;
+        }
+    }
+
+    if ( SDL_UpdateWindowSurface( m_window.get() ) != 0 )
+    {
+        std::cout << "Can not update the screen! SDL Error: " << SDL_GetError() << std::endl;
+        return false;
+    }
+    return true;
 }
 

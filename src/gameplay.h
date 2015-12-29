@@ -40,6 +40,9 @@ private:
 
     std::shared_ptr<Brick> add_brick();
 
+    bool get_swap_pair_by_highlighting( std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > >& out_swap_pair );
+    bool get_swap_pair_by_dragging( std::pair< std::shared_ptr< Brick >, std::shared_ptr< Brick > >& out_swap_pair );
+
     void init_field();
 private:
     GameEngine& m_game_engine;
