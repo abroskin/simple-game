@@ -1,0 +1,19 @@
+[name]
+The game.
+
+[controls]
+F - toggle fullscreen.
+Esc - Quit the game.
+
+[description]
+Drag or press on bricks to swap them. 
+If after a swap there are any horizontal or vertical sequences of three (or more) same color bricks (with swaped bricks in it), these sequences will be removed. Gaps will be filled by bricks below.
+If after a swap there is no matched sequence, swaped bricks move back.
+
+[round]
+One session is 1 minute long.
+After it finished new session starts.
+Player gets one point for each removed brick.
+
+[notes]
+On some platforms going to a fullscreen mode can minimize the window.

@@ -166,18 +166,12 @@ void GameEngine::show_info_popup(const std::string& title, const std::string& me
 {
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    bool fullscreen = m_fullscreen;
-    if ( fullscreen )
+    if ( m_fullscreen )
     {
         toggle_fullscreen();
     }
 
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_INFORMATION, title.c_str(), message.c_str(), nullptr );
-
-    if ( fullscreen )
-    {
-        toggle_fullscreen();
-    }
 
     // Don't account events and time spent during popup message.
     m_timestamp += std::chrono::high_resolution_clock::now() - start_time;
@@ -208,7 +202,6 @@ bool GameEngine::handling_events()
             {
                 if ( event.key.keysym.scancode == SDL_SCANCODE_F )
                 {
-                    std::cout << "Key pressed" << std::endl;
                     if ( !toggle_fullscreen() )
                     {
                         return false;
