@@ -15,5 +15,14 @@ One session is 1 minute long.
 After it finished new session starts.
 Player gets one point for each removed brick.
 
+[installation]
+Go to a root directory. Run cmake to generate a project file for a desired build tool. Then build the project.
+> cmake .
+> make
+> ./simple-game
+
+[requirements]
+SDL and SDL_image must be intalled.
+
 [notes]
 On some platforms going to a fullscreen mode can minimize the window.
